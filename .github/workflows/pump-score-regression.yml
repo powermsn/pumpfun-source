@@ -12,7 +12,7 @@ permissions:
   contents: read
 jobs:
   compare:
-    runs-on: macos-14
+    runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
       CARGO_REGISTRIES_CRATES_IO_PROTOCOL: sparse
@@ -24,7 +24,7 @@ jobs:
         run: |
           [[ "$BASE" =~ ^[0-9a-f]{40}$ ]]
           [[ "$CANDIDATE" =~ ^[0-9a-f]{40}$ ]]
-          test "$(uname -m)" = arm64
+          test "$(uname -m)" = x86_64
       - uses: actions/checkout@v4
         with:
           path: tooling
@@ -48,8 +48,8 @@ jobs:
           python -B tooling/reconstruction/harness/test_build_score_pair.py
       - name: Install and authenticate the pinned SDK
         run: |
-          curl --fail --location --retry 3 https://github.com/anza-xyz/platform-tools/releases/download/v1.44/platform-tools-osx-aarch64.tar.bz2 -o "$RUNNER_TEMP/sdk.tar.bz2"
-          echo "66e20d135fddd70ff519baf7ff320d762957f9aedf93a50e23756db23ad79351  $RUNNER_TEMP/sdk.tar.bz2" | shasum -a 256 -c -
+          curl --fail --location --retry 3 https://github.com/anza-xyz/platform-tools/releases/download/v1.44/platform-tools-linux-x86_64.tar.bz2 -o "$RUNNER_TEMP/sdk.tar.bz2"
+          echo "6719b889d60677a8a2fcf4c82f68441a1afe0ab093edd2efe9f84a67a808b3e9  $RUNNER_TEMP/sdk.tar.bz2" | sha256sum -c -
           mkdir -p "$HOME/.cache/solana/v1.44/platform-tools"
           tar -xjf "$RUNNER_TEMP/sdk.tar.bz2" -C "$HOME/.cache/solana/v1.44/platform-tools"
           python -B tooling/reconstruction/toolchain/bootstrap.py --sdk-check full
@@ -57,9 +57,6 @@ jobs:
         run: |
           export RUSTC="$HOME/.cache/pumpfun-reconstruction/toolchains/hybrid144/rust/bin/rustc"
           export CARGO_HOME="$HOME/.cargo"
-          # Acquire the whole locked closure before fastbuild stages the crate
-          # in its virtual workspace. A target-filtered fetch omits crates that
-          # the later offline build needs (for example aead on a fresh runner).
           "$HOME/.cache/solana/v1.44/platform-tools/rust/bin/cargo" fetch --locked --manifest-path baseline/programs/pump/Cargo.toml
           "$HOME/.cache/solana/v1.44/platform-tools/rust/bin/cargo" fetch --locked --manifest-path candidate/programs/pump/Cargo.toml
       - name: Build and compare with one scorer and isolated cold targets
